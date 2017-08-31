@@ -94,7 +94,7 @@ function defineSpecsFor(apiRoot){
             .get('/' + macAddress + '/actuators/led')
             .set('Accepts', contentType);
         }
-        it( "gets a LED stream of values", function(done) {
+        it( "gets an event-stream of LED values", function(done) {
             var evtSource = new EventSource(apiRoot + '/' + macAddress + '/actuators/led');
             var counter = 0;
             evtSource.onmessage = function(e) {
