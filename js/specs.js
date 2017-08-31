@@ -1,225 +1,138 @@
 function defineSpecsFor(apiRoot){
 
-  function get(url, options){
-    return getRaw(url,options).then( transformResponseToJson );
-  }
+  var macAddress = '0123456789ab';
 
-  function getRaw(url, options){
-    return ajax("GET", url, options);
-  }
-  function post(url, data, options){
-    options = options || {};
-    options.data = JSON.stringify(data);
-    return ajax("POST", url, options);
-  }
-  function postJson(url, data, options){
-    return post(url,data,options).then( transformResponseToJson );
-  }
+    describe( "Getting configuration for a given Thingy", function() {
+        it( "responds to a GET on setup with a correct configuration object", function() {
+            return chai.request(apiRoot)
+            .get('/' + macAddress + '/setup')
+            .then(function(res) {
+                expect(res).to.have.status(200);
+                var setup = transformResponseToJson(res.text);
 
-  function patch(url, data, options){
-    options = options || {};
-    options.data = JSON.stringify(data);
-    return ajax("PATCH", url, options);
-  }
-  function patchJson(url, data, options){
-    return patch(url,data,options).then( transformResponseToJson );
-  }
-
-  function delete_(url, options){
-    return ajax("DELETE", url, options);
-  }
-
-  function postRoot(data){
-    return postJson(apiRoot,data);
-  }
-  function getRoot(){
-    return get(apiRoot);
-  }
-
-  function urlFromTodo(todo){ return todo.url; }
-
-  describe( "Todo-Backend API residing at "+apiRoot, function(){
-
-    function createFreshTodoAndGetItsUrl(params){
-      var postParams = _.defaults( (params||{}), {
-        title: "blah"
-      });
-      return postRoot(postParams)
-        .then( urlFromTodo );
-    };
-
-    describe( "the pre-requisites", function(){
-      specify( "the api root responds to a GET (i.e. the server is up and accessible, CORS headers are set up)", function(){
-        var getRoot = getRaw(apiRoot);
-        return expect( getRoot ).to.be.fulfilled;
-      });
-
-      specify( "the api root responds to a POST with the todo which was posted to it", function(){
-        var postRoot = postJson(apiRoot, {title:"a todo"});
-        return expect( postRoot ).to.eventually.have.property("title","a todo");
-      });
-
-      specify( "the api root responds successfully to a DELETE", function(){
-        var deleteRoot = delete_(apiRoot);
-        return expect( deleteRoot ).to.be.fulfilled;
-      });
-
-      specify( "after a DELETE the api root responds to a GET with a JSON representation of an empty array", function(){
-        var deleteThenGet = delete_(apiRoot).then( getRoot );
-
-        return expect( deleteThenGet ).to.become([]);
-      });
+                expect(setup).to.have.property('color');
+                expect(setup).to.have.deep.property('color.interval')
+                    .that.is.an('number').that.is.at.least(0);
+                expect(setup).to.have.property('temperature');
+                expect(setup).to.have.deep.property('temperature.interval')
+                    .that.is.an('number').that.is.at.least(0);
+                expect(setup).to.have.property('pressure');
+                expect(setup).to.have.deep.property('pressure.interval')
+                    .that.is.an('number').that.is.at.least(0);
+                expect(setup).to.have.property('gas');
+                expect(setup).to.have.deep.property('gas.mode')
+                    .that.is.an('number').that.is.at.least(0);
+                expect(setup).to.have.property('humidity');
+                expect(setup).to.have.deep.property('humidity.interval')
+                    .that.is.an('number').that.is.at.least(0);
+            });
+        });
     });
 
-    describe( "storing new todos by posting to the root url", function(){
-      beforeEach(function(){
-        return delete_(apiRoot);
-      });
-
-      it("adds a new todo to the list of todos at the root url", function(){
-        var getAfterPost = postRoot({title:"walk the dog"}).then(getRoot);
-        return getAfterPost.then(function(todosFromGet){
-          expect(todosFromGet).to.have.length(1);
-          expect(todosFromGet[0]).to.have.property("title","walk the dog");
-        });
-      });
-
-      function createTodoAndVerifyItLooksValidWith( verifyTodoExpectation ){
-        return postRoot({title:"blah"})
-          .then(verifyTodoExpectation)
-          .then(getRoot)
-          .then(function(todosFromGet){
-            verifyTodoExpectation(todosFromGet[0]);
-        });
-      }
-
-      it("sets up a new todo as initially not completed", function(){
-        return createTodoAndVerifyItLooksValidWith(function(todo){
-          expect(todo).to.have.property("completed",false);
-          return todo;
-        });
-      });
-
-      it("each new todo has a url", function(){
-        return createTodoAndVerifyItLooksValidWith(function(todo){
-          expect(todo).to.have.a.property("url").is.a("string");
-          return todo;
-        });
-      });
-      it("each new todo has a url, which returns a todo", function(){
-        var fetchedTodo = postRoot({title:"my todo"})
-          .then( function(newTodo){
-            return get(newTodo.url);
-          });
-        return expect(fetchedTodo).to.eventually.have.property("title","my todo");
-      });
-    });
-
-
-    describe( "working with an existing todo", function(){
-      beforeEach(function(){
-        return delete_(apiRoot);
-      });
-
-      it("can navigate from a list of todos to an individual todo via urls", function(){
-        var makeTwoTodos = Q.all( [
-          postRoot({title:"todo the first"}),
-          postRoot({title:"todo the second"})
-          ] );
-
-        var getAgainstUrlOfFirstTodo = makeTwoTodos.then( getRoot ).then( function(todoList){
-          expect(todoList).to.have.length(2);
-          return get(urlFromTodo(todoList[0]));
-        });
-
-        return expect(getAgainstUrlOfFirstTodo).to.eventually.have.property("title");
-      });
-
-      it("can change the todo's title by PATCHing to the todo's url", function(){
-        return createFreshTodoAndGetItsUrl({title:"initial title"})
-          .then( function(urlForNewTodo){
-            return patchJson( urlForNewTodo, {title:"bathe the cat"} );
-          }).then( function(patchedTodo){
-            expect(patchedTodo).to.have.property("title","bathe the cat");
-          });
-      });
-
-      it("can change the todo's completedness by PATCHing to the todo's url", function(){
-        return createFreshTodoAndGetItsUrl()
-          .then( function(urlForNewTodo){
-            return patchJson( urlForNewTodo, {completed:true} );
-          }).then( function(patchedTodo){
-            expect(patchedTodo).to.have.property("completed",true);
-          });
-      });
-
-      it("changes to a todo are persisted and show up when re-fetching the todo", function(){
-        var patchedTodo = createFreshTodoAndGetItsUrl()
-          .then( function(urlForNewTodo){
-            return patchJson( urlForNewTodo, {title:"changed title", completed:true} );
-          });
-
-        function verifyTodosProperties(todo){
-          expect(todo).to.have.property("completed",true);
-          expect(todo).to.have.property("title","changed title");
+    describe( "Pushing sensor data for a given Thingy", function() {
+        function postSensorData(macAddress, data) {
+            var date = new Date();
+            return chai.request(apiRoot)
+            .post('/' + macAddress + '/sensors/')
+            .send({timestamp: date.toISOString(), sensors: data});
         }
-
-        var verifyRefetchedTodo = patchedTodo.then(function(todo){
-          return get( todo.url );
-        }).then( function(refetchedTodo){
-          verifyTodosProperties(refetchedTodo);
+        it( "pushes temperature data", function() {
+            return postSensorData(macAddress, {temperature: 42})
+            .then(function(res) {
+                expect(res).to.have.status(200);
+            });
+        });
+        it( "pushes pressure data", function() {
+            return postSensorData(macAddress, {pressure: 42})
+            .then(function(res) {
+                expect(res).to.have.status(200);
+            });
+        });
+        it( "pushes gas data", function() {
+            return postSensorData(macAddress, {gas: 42})
+            .then(function(res) {
+                expect(res).to.have.status(200);
+            });
+        });
+        it( "pushes humidity data", function() {
+            return postSensorData(macAddress, {humidity: 42})
+            .then(function(res) {
+                expect(res).to.have.status(200);
+            });
+        });
+        it( "pushes multiple sensor data", function() {
+            return postSensorData(macAddress,
+                {temperature: 42, pressure: 43, gas: 44, humidity: 45}
+            )
+            .then(function(res) {
+                expect(res).to.have.status(200);
+            });
+        });
+    });
+    describe( "Pushing button state for a given Thingy", function() {
+        function putButtonState(macAddress, state) {
+            return chai.request(apiRoot)
+            .put('/' + macAddress + '/sensors/button')
+            .send({pressed: state});
+        }
+        it( "pushes button state (pressed)", function() {
+            return putButtonState(macAddress, false)
+            .then(function(res) {
+                expect(res).to.have.status(200);
+            });
+        });
+        it( "pushes button state (not pressed)", function() {
+            return putButtonState(macAddress, true)
+            .then(function(res) {
+                expect(res).to.have.status(200);
+            });
+        });
+    });
+    describe(" Actuating LED", function() {
+        function getLEDColor(macAddress, contentType) {
+            return chai.request(apiRoot, contentType)
+            .get('/' + macAddress + '/actuators/led')
+            .set('Accepts', contentType);
+        }
+        it( "gets a LED stream of values", function(done) {
+            var evtSource = new EventSource(apiRoot + '/' + macAddress + '/actuators/led');
+            var counter = 0;
+            evtSource.onmessage = function(e) {
+                try{
+                    var data = transformResponseToJson(e.data);
+                    expect(data).to.have.property('color')
+                        .that.is.a('number').that.is.at.least(0);
+                    expect(data).to.have.property('intensity')
+                        .that.is.a('number').that.is.at.least(0);
+                    expect(data).to.have.property('delay')
+                        .that.is.a('number').that.is.at.least(0);
+                    if(counter >= 2){
+                        evtSource.close();
+                        done();
+                    }
+                    counter += 1;
+                    return;
+                } catch(e) {
+                    evtSource.close();
+                    done(e);
+                }
+            }
+            return;
+        })
+        it( "gets a LED value as JSON", function() {
+            return getLEDColor(macAddress, 'application/json')
+            .then(function(res) {
+                data = transformResponseToJson(res.text);
+                expect(data).to.have.property('color')
+                    .that.is.a('number').that.is.at.least(0);
+                expect(data).to.have.property('intensity')
+                    .that.is.a('number').that.is.at.least(0);
+                expect(data).to.have.property('delay')
+                    .that.is.a('number').that.is.at.least(0);
+            });
         });
 
-        var verifyRefetchedTodoList = patchedTodo.then(function(){
-          return getRoot();
-        }).then( function(todoList){
-          expect(todoList).to.have.length(1);
-          verifyTodosProperties(todoList[0]);
-        });
-
-        return Q.all([
-          verifyRefetchedTodo,
-          verifyRefetchedTodoList
-        ]);
-      });
-
-      it("can delete a todo making a DELETE request to the todo's url", function(){
-        var todosAfterCreatingAndDeletingTodo = createFreshTodoAndGetItsUrl()
-          .then( function(urlForNewTodo){
-            return delete_(urlForNewTodo);
-          }).then( getRoot );
-        return expect(todosAfterCreatingAndDeletingTodo).to.eventually.be.empty;
-      });
-
     });
-
-    describe("tracking todo order", function(){
-      it("can create a todo with an order field", function(){
-        var postResult = postRoot({title:"blah",order:523});
-        return expect(postResult).to.eventually.have.property("order",523);
-      });
-
-      it("can PATCH a todo to change its order", function(){
-        var patchedTodo = createFreshTodoAndGetItsUrl( {order: 10} )
-          .then( function(newTodoUrl){
-            return patchJson(newTodoUrl,{order:95});
-          });
-
-        return expect(patchedTodo).to.eventually.have.property("order",95);
-      });
-
-      it("remembers changes to a todo's order", function(){
-        var refetchedTodo = createFreshTodoAndGetItsUrl( {order: 10} )
-          .then( function(newTodoUrl){
-            return patchJson(newTodoUrl,{order:95});
-          }).then( function( patchedTodo ){
-            return get(urlFromTodo(patchedTodo));
-          });
-
-        return expect(refetchedTodo).to.eventually.have.property("order",95);
-      });
-    });
-  });
 
 
   function transformResponseToJson(data){
@@ -231,49 +144,4 @@ function defineSpecsFor(apiRoot){
       throw wrapped;
     }
   }
-
-  function interpretXhrFail(httpMethod,url,xhr){
-    var failureHeader = "\n\n"+httpMethod+" "+url+"\nFAILED\n\n";
-    if( xhr.status == 0 ){
-      return Error(
-        failureHeader
-        + "The browser failed entirely when make an AJAX request.\n"
-        + "Either there is a network issue in reaching the url, or the\n"
-        + "server isn't doing the CORS things it needs to do.\n"
-        + "Ensure that you're sending back: \n"
-        + "  - an `access-control-allow-origin: *` header for all requests\n"
-        + "  - an `access-control-allow-headers` header which lists headers such as \"Content-Type\"\n"
-        + "\n"
-        + "Also ensure you are able to respond to OPTION requests appropriately. \n"
-        + "\n"
-      );
-    }else{
-      return Error(
-        failureHeader
-        + xhr.status + ": " + xhr.statusText + " (" + xhr.responseText.replace(/\n*$/, "") + ")"
-        + "\n\n"
-      );
-    }
-  }
-
-  function ajax(httpMethod, url, options){
-    var ajaxOptions = _.defaults( (options||{}), {
-      type: httpMethod,
-      url: url,
-      contentType: "application/json",
-      dataType: "text", // so we can explicitly parse JSON and fail with more detail than jQuery usually would give us
-      timeout: 30000 // so that we don't fail while waiting on a heroku dyno to spin up
-    });
-
-    var xhr = $.ajax( ajaxOptions );
-
-    return Q.promise( function(resolve, reject){
-      xhr.success( function(){
-        return resolve(xhr);
-      });
-      xhr.fail( function(){
-        reject(interpretXhrFail(httpMethod,url,xhr));
-      });
-    });
-  };
 }
