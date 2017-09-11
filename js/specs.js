@@ -36,6 +36,14 @@ function defineSpecsFor(apiRoot){
             .post('/' + macAddress + '/sensors/')
             .send({timestamp: date.toISOString(), sensors: data});
         }
+        it( "pushes color data", function() {
+            return postSensorData(macAddress, {
+                color: {red: 42, green: 43, blue: 44, clear: 45}
+            })
+            .then(function(res) {
+                expect(res).to.have.status(200);
+            })
+        });
         it( "pushes temperature data", function() {
             return postSensorData(macAddress, {temperature: 42})
             .then(function(res) {
@@ -62,7 +70,9 @@ function defineSpecsFor(apiRoot){
         });
         it( "pushes multiple sensor data", function() {
             return postSensorData(macAddress,
-                {temperature: 42, pressure: 43, gas: 44, humidity: 45}
+                {temperature: 42, pressure: 43, gas: 44, humidity: 45,
+                    color: {red: 42, green: 43, blue: 44, clear: 45}
+                }
             )
             .then(function(res) {
                 expect(res).to.have.status(200);
