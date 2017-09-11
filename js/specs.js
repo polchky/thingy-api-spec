@@ -109,6 +109,7 @@ function defineSpecsFor(apiRoot){
         it( "gets an event-stream of LED values", function(done) {
             var evtSource = new EventSource(apiRoot + '/' + macAddress + '/actuators/led');
             var counter = 0;
+            this.timeout(30000);
             evtSource.onmessage = function(e) {
                 try{
                     var data = transformResponseToJson(e.data);
