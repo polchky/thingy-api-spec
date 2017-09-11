@@ -94,6 +94,18 @@ function defineSpecsFor(apiRoot){
             .get('/' + macAddress + '/actuators/led')
             .set('Accepts', contentType);
         }
+        it( "gets a LED value as JSON", function() {
+            return getLEDColor(macAddress, 'application/json')
+            .then(function(res) {
+                data = transformResponseToJson(res.text);
+                expect(data).to.have.property('color')
+                    .that.is.a('number').that.is.at.least(0);
+                expect(data).to.have.property('intensity')
+                    .that.is.a('number').that.is.at.least(0);
+                expect(data).to.have.property('delay')
+                    .that.is.a('number').that.is.at.least(0);
+            });
+        });
         it( "gets an event-stream of LED values", function(done) {
             var evtSource = new EventSource(apiRoot + '/' + macAddress + '/actuators/led');
             var counter = 0;
@@ -119,18 +131,6 @@ function defineSpecsFor(apiRoot){
             }
             return;
         })
-        it( "gets a LED value as JSON", function() {
-            return getLEDColor(macAddress, 'application/json')
-            .then(function(res) {
-                data = transformResponseToJson(res.text);
-                expect(data).to.have.property('color')
-                    .that.is.a('number').that.is.at.least(0);
-                expect(data).to.have.property('intensity')
-                    .that.is.a('number').that.is.at.least(0);
-                expect(data).to.have.property('delay')
-                    .that.is.a('number').that.is.at.least(0);
-            });
-        });
 
     });
 
