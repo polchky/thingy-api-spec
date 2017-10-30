@@ -102,7 +102,7 @@ function defineSpecsFor(apiRoot){
         function getLEDColor(macAddress, contentType) {
             return chai.request(apiRoot, contentType)
             .get('/' + macAddress + '/actuators/led')
-            .set('Accepts', contentType);
+            .set('Accept', contentType);
         }
         it( "gets a LED value as JSON", function() {
             return getLEDColor(macAddress, 'application/json')
