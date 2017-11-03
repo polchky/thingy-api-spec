@@ -68,7 +68,7 @@ function defineSpecsFor(apiRoot){
                 expect(res).to.have.status(200);
             });
         });
-        it( "pushes multiple sensor data", function() {
+        it( "pushes multiple sensor data (currently unused)", function() {
             return postSensorData(macAddress,
                 {temperature: 42, pressure: 43, gas: {eco2: 500, tvoc: 25}, humidity: 45,
                     color: {red: 42, green: 43, blue: 44, clear: 45}
