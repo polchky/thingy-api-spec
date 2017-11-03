@@ -57,7 +57,7 @@ function defineSpecsFor(apiRoot){
             });
         });
         it( "pushes gas data", function() {
-            return postSensorData(macAddress, {gas: 42})
+            return postSensorData(macAddress, {gas: {eco2: 500, tvoc: 25}})
             .then(function(res) {
                 expect(res).to.have.status(200);
             });
